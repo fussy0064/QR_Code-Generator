@@ -1,0 +1,38 @@
+# Gradle
+.gradle/
+build/
+/app/build/
+/local.properties
+gradle/wrapper/gradle-wrapper.jar
+
+# Gradle caches (the main culprit!)
+caches/
+wrapper/
+daemon/
+native/
+jdks/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+/captures
+.externalNativeBuild/
+.cxx/
+
+# Keystore
+*.jks
+*.keystore
+
+# APK / AAB
+*.apk
+*.aab
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large JARs
+*.jar
+!gradle/wrapper/gradle-wrapper.jar

@@ -1,0 +1,1 @@
+package com.fussy.qr_master.ui.theme
