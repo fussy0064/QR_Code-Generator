@@ -9,10 +9,22 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
+import android.webkit.JavascriptInterface
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import java.io.OutputStream
 
 class MainActivity : ComponentActivity() {
 
@@ -58,11 +70,11 @@ class MainActivity : ComponentActivity() {
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
 
+
             // Allow file downloads (QR save functionality)
-            setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-                // For data URIs (QR code saves), the JS handles downloads via anchor click
-                // No additional handling needed
-            }
+            setDownloadListener { _, _, _, _, _ -> }
+
+            addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
         }
 
         setContentView(webView)
@@ -106,5 +118,63 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         webView.destroy()
         super.onDestroy()
+    }
+
+    inner class WebAppInterface(private val mContext: Context) {
+        @JavascriptInterface
+        fun saveImage(base64Data: String, fileName: String) {
+            val uri = saveBase64ToGallery(base64Data, fileName)
+            if (uri != null) {
+                runOnUiThread { Toast.makeText(mContext, "QR code saved to Pictures!", Toast.LENGTH_SHORT).show() }
+            } else {
+                runOnUiThread { Toast.makeText(mContext, "Failed to save QR code.", Toast.LENGTH_SHORT).show() }
+            }
+        }
+
+        @JavascriptInterface
+        fun shareImage(base64Data: String, fileName: String) {
+            val uri = saveBase64ToGallery(base64Data, fileName)
+            if (uri != null) {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                mContext.startActivity(Intent.createChooser(shareIntent, "Share QR Code"))
+            } else {
+                runOnUiThread { Toast.makeText(mContext, "Failed to prepare image for sharing.", Toast.LENGTH_SHORT).show() }
+            }
+        }
+
+        private fun saveBase64ToGallery(base64Data: String, fileName: String): Uri? {
+            try {
+                val cleanBase64 = base64Data.replaceFirst("data:image/png;base64,", "")
+                val decodedString = Base64.decode(cleanBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/QR_Master")
+                    }
+                }
+
+                val resolver = mContext.contentResolver
+                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+                uri?.let {
+                    val outputStream = resolver.openOutputStream(it)
+                    if (outputStream != null) {
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                        outputStream.close()
+                    }
+                }
+                return uri
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return null
+            }
+        }
     }
 }
