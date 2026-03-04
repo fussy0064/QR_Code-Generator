@@ -13,9 +13,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/QR_icon"
+        android:icon="@drawable/qr_icon"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/QR_icon"
+        android:roundIcon="@drawable/qr_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.QR_Master"
         android:usesCleartextTraffic="true">
